@@ -207,6 +207,7 @@ class DfuTransportSerial(DfuTransport):
     def close(self):
         super(DfuTransportSerial, self).close()
         self.serial_port.close()
+        self.serial_port = None
 
     def send_init_packet(self, init_packet):
         def try_to_recover():
@@ -438,3 +439,18 @@ class DfuTransportSerial(DfuTransport):
         else:
             raise NordicSemiException('Response Code {}'.format(
                 get_dict_key(DfuTransport.RES_CODE, resp[2])))
+
+    def send_text_message(self, text):
+        if not text: # nothing to send
+            return
+
+        logger.debug("Serial: send_text_message [%s]" % text)
+        if self.serial_port is None:
+            self.open()
+            if self.serial_port is not None:
+                logger.debug("Serial: send_text_message was failed because couldn't open port")
+                return
+            self.serial_port.write(text.encode('utf-8'))
+            self.close()
+        else:
+            self.serial_port.write(text.encode('utf-8'))

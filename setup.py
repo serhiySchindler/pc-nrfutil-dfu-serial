@@ -42,11 +42,7 @@ USAGE:
     python setup.py install
 
 """
-import os
-import platform
-
 from setuptools import setup, find_packages
-from setuptools.command.test import test as TestCommand
 
 from nordicsemi import version
 

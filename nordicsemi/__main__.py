@@ -39,6 +39,7 @@ import os
 import sys
 import argparse
 import logging
+print os.getcwd()
 sys.path.append(os.getcwd())
 
 from nordicsemi.dfu.dfu import Dfu
@@ -47,7 +48,7 @@ from nordicsemi.dfu.dfu_transport_serial import DfuTransportSerial
 logger = logging.getLogger(__name__)
 
 
-def do_serial(package, port, flow_control, packet_receipt_notification, baud_rate):
+def do_serial(package, port, flow_control = None, packet_receipt_notification = None, baud_rate = None, dfuStart = None):
     if flow_control is None:
         flow_control = DfuTransportSerial.DEFAULT_FLOW_CONTROL
     if packet_receipt_notification is None:
@@ -59,6 +60,11 @@ def do_serial(package, port, flow_control, packet_receipt_notification, baud_rat
 
     serial_backend = DfuTransportSerial(com_port=str(port), baud_rate=baud_rate,
                                         flow_control=flow_control, prn=packet_receipt_notification, do_ping=True)
+    if dfuStart:
+        logger.info('Enterring DFU mode ...')
+        serial_backend.send_text_message(dfuStart)
+        logger.info('Done')
+
     dfu = Dfu(zip_file_path = package, dfu_transport = serial_backend)
     dfu.dfu_send_images()
 
@@ -75,14 +81,13 @@ def do_main():
                         help = "File name of the DFU package.")
     parser.add_argument('-p', '--port', dest = 'port', nargs = 1, type = str, required = True,
                         help = "Serial port address to which the device is connected. (e.g. COM1 in windows systems, /dev/ttyACM0 in linux/mac)")
+    parser.add_argument('-dfus', '--dfuStart', dest = 'dfuStart', nargs = '?', type = str, required = False,
+                        help = "The dfu entering mode string.")
     args = parser.parse_args()
 
-    flow_control = None
-    packet_receipt_notification = None
-    baud_rate = None
     try:
-        do_serial(args.package[0], args.port[0], flow_control, packet_receipt_notification, baud_rate)
-    except Exception as e:
+        do_serial(package = args.package[0], port = args.port[0], dfuStart = args.dfuStart)
+    except:
         logger.exception('')
 
 if __name__ == '__main__':
