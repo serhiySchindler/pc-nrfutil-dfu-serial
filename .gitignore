@@ -1,0 +1,6 @@
+*.pyc
+
+# Build
+build/
+dist/
+nrfutil.egg-info/
