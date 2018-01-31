@@ -439,15 +439,16 @@ class DfuTransportSerial(DfuTransport):
             raise NordicSemiException('Response Code {}'.format(
                 get_dict_key(DfuTransport.RES_CODE, resp[2])))
 
-    def send_text_message(self, text):
+    def send_text_message(self, text, flow_control = None):
         if not text: # nothing to send
             return
 
         logger.debug("Serial: send_text_message [%s]" % text)
         if self.serial_port is None:
             try:
+                flow_control = flow_control if flow_control is not None else self.flow_control
                 serial = Serial(port=self.com_port,
-                                baudrate=self.baud_rate, rtscts=self.flow_control, timeout=self.timeout)
+                                baudrate=self.baud_rate, rtscts=flow_control, timeout=self.timeout)
                 serial.write(text.encode('utf-8'))
                 serial.close()
             except Exception as e:

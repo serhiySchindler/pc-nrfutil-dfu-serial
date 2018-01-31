@@ -62,7 +62,7 @@ def do_serial(package, port, flow_control = None, packet_receipt_notification = 
                                         flow_control=flow_control, prn=packet_receipt_notification, do_ping=True)
     if dfuStart:
         logger.info('Enterring DFU mode ...')
-        serial_backend.send_text_message(dfuStart)
+        serial_backend.send_text_message(dfuStart, flow_control = False)
         logger.info('Done')
 
     dfu = Dfu(zip_file_path = package, dfu_transport = serial_backend)
