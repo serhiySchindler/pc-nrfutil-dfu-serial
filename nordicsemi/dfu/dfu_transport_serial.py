@@ -187,8 +187,7 @@ class DfuTransportSerial(DfuTransport):
                 baudrate=self.baud_rate, rtscts=self.flow_control, timeout=self.timeout)
             self.dfu_adapter = DFUAdapter(self.serial_port)
         except Exception as e:
-            raise NordicSemiException("Serial port could not be opened on {0}"
-            + ". Reason: {1}".format(self.com_port, e.message))
+            raise NordicSemiException("Serial port could not be opened on {0}. Reason: {1}".format(self.com_port, e.message))
 
         if self.do_ping:
             ping_success = False
@@ -446,11 +445,13 @@ class DfuTransportSerial(DfuTransport):
 
         logger.debug("Serial: send_text_message [%s]" % text)
         if self.serial_port is None:
-            self.open()
-            if self.serial_port is not None:
-                logger.debug("Serial: send_text_message was failed because couldn't open port")
-                return
-            self.serial_port.write(text.encode('utf-8'))
-            self.close()
+            try:
+                serial = Serial(port=self.com_port,
+                                baudrate=self.baud_rate, rtscts=self.flow_control, timeout=self.timeout)
+                serial.write(text.encode('utf-8'))
+                serial.close()
+            except Exception as e:
+                logger.exception('send_text_message')
+                raise NordicSemiException("Serial port could not be opened on {0}. Reason: {1}".format(self.com_port, e))
         else:
             self.serial_port.write(text.encode('utf-8'))
