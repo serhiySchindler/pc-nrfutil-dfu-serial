@@ -59,7 +59,7 @@ setup(
     version=version.NRFUTIL_DFU_SERIAL_VERSION,
     license="Modified BSD License",
     author = "Nordic Semiconductor ASA / theporttechnology.com",
-    url="https://github.com/NordicSemiconductor/pc-nrfutil",
+    url="https://github.com/serhiySchindler/pc-nrfutil-dfu-serial",
     description="Nordic Semiconductor / theporttechnology.com nrfutil-dfu-serial utility",
     long_description=description,
     packages=find_packages(exclude=["tests.*", "tests"]),
