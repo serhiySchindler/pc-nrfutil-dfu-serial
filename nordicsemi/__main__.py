@@ -34,46 +34,107 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
+import signal
 
+"""nrfutil command line tool."""
 import os
 import sys
 import argparse
+import time
 import logging
-print os.getcwd()
+import re
+from serial import Serial
 sys.path.append(os.getcwd())
 
 from nordicsemi.dfu.dfu import Dfu
+from nordicsemi.dfu.dfu_transport import DfuEvent, TRANSPORT_LOGGING_LEVEL
 from nordicsemi.dfu.dfu_transport_serial import DfuTransportSerial
+from nordicsemi import version as nrfutil_version
 
 logger = logging.getLogger(__name__)
 
 
-def do_serial(package, port, flow_control = None, packet_receipt_notification = None, baud_rate = None, dfuStart = None):
+def version():
+    """Display nrfutil version."""
+    logger.info("nrfutil version {}".format(nrfutil_version.NRFUTIL_VERSION))
+    logger.info("PyPi URL: https://pypi.python.org/pypi/nrfutil")
+    logger.debug("GitHub URL: https://github.com/NordicSemiconductor/pc-nrfutil")
+
+global_bar = None
+def update_progress(progress=0):
+    if global_bar:
+        global_bar.update(progress)
+     
+     
+def send_text_message(device, baudrate, text, flow_control):
+    if not text: # nothing to send
+        return
+
+    logger.debug("Serial: send_text_message [%s]" % text)
+    try:
+        serial = Serial(port=device, baudrate=baudrate, rtscts=flow_control, timeout=2)
+        serial.write(text.encode('utf-8'))
+        serial.close()
+        time.sleep(1)
+    except Exception as e:
+        logger.exception('send_text_message')
+        raise Exception("Serial port could not be opened on {0}. Reason: {1}".format(device, e))
+
+
+
+
+def do_serial(package, port, connect_delay, flow_control, packet_receipt_notification, baud_rate, ping,
+              timeout, dfuStart = None):
+
     if flow_control is None:
         flow_control = DfuTransportSerial.DEFAULT_FLOW_CONTROL
     if packet_receipt_notification is None:
         packet_receipt_notification = DfuTransportSerial.DEFAULT_PRN
     if baud_rate is None:
         baud_rate = DfuTransportSerial.DEFAULT_BAUD_RATE
+    if ping is None:
+        ping = False
+    if port is None:
+        raise Exception("Please specify port!")
 
-    logger.info('Programming %s via %s serial port ...' % (package, port, ))
-
+    if timeout is None:
+        timeout = DfuTransportSerial.DEFAULT_TIMEOUT
+        
+    logger.info("Using board at serial port: {0}, flow_control: {1}, baud_rate: {2}, ping: {3}"
+                            .format(port, flow_control, baud_rate, ping))
     serial_backend = DfuTransportSerial(com_port=str(port), baud_rate=baud_rate,
-                                        flow_control=flow_control, prn=packet_receipt_notification, do_ping=True)
+                                        flow_control=flow_control, prn=packet_receipt_notification, do_ping=ping,
+                                        timeout=timeout)
+    serial_backend.register_events_callback(DfuEvent.PROGRESS_EVENT, update_progress)
+    
     if dfuStart:
         logger.info('Enterring DFU mode ...')
-        serial_backend.send_text_message(dfuStart, flow_control = False)
+        send_text_message(str(port), baud_rate, dfuStart, 1)
         logger.info('Done')
+    
+    dfu = Dfu(zip_file_path = package, dfu_transport = serial_backend, connect_delay = connect_delay)
 
-    dfu = Dfu(zip_file_path = package, dfu_transport = serial_backend)
-    dfu.dfu_send_images()
+    if logger.getEffectiveLevel() > logging.INFO:
+        with click.progressbar(length=dfu.dfu_get_total_size()) as bar:
+            global global_bar
+            global_bar = bar
+            dfu.dfu_send_images()
+    else:
+        dfu.dfu_send_images()
 
-    logger.info('Device programmed.')
+    logger.info("Device programmed.")
+
 
 
 def do_main():
-    logging.basicConfig(format = '%(asctime)s %(message)s', level = logging.DEBUG)
+    logging.basicConfig(format='%(asctime)s %(message)s', level=logging.DEBUG)
 
+    #root = logging.getLogger('')
+    #fh = logging.FileHandler('test.txt')
+    #fh.setLevel(logging.DEBUG)
+    #fh.setFormatter(logging.Formatter('%(asctime)s %(message)s'))
+    #root.addHandler(fh)
+    
     # parse the command line parameters
     # f.e. -pkg app_dfu_package.zip -p COM3
     parser = argparse.ArgumentParser(description = 'Perform a Device Firmware Update over serial transport given a DFU package (zip file).')
@@ -83,12 +144,24 @@ def do_main():
                         help = "Serial port address to which the device is connected. (e.g. COM1 in windows systems, /dev/ttyACM0 in linux/mac)")
     parser.add_argument('-dfus', '--dfuStart', dest = 'dfuStart', nargs = '?', type = str, required = False,
                         help = "The dfu entering mode string.")
+    parser.add_argument('-fc', '--flow-control', dest = 'fc', nargs = 1, type = int, required = False,
+                        help = "To enable flow control set this flag to 1.")
+    parser.add_argument('-t', '--timeout', dest = 'fc', nargs = 1, type = int, required = False,
+                        help = "Set the timeout in seconds for board to respond (default: 30 seconds).")
+    parser.add_argument("-v", "--version", action="store_true",
+                        help = "get Version info")
     args = parser.parse_args()
-
+    
+    if args.version:
+        version()
+    
     try:
-        do_serial(package = args.package[0], port = args.port[0], dfuStart = args.dfuStart)
+        do_serial(package = args.package[0], port = args.port[0], connect_delay = 0, 
+                flow_control = args.fc[0], packet_receipt_notification = None , 
+                baud_rate = 115200, ping = False, timeout = 2, dfuStart = args.dfuStart)
     except:
         logger.exception('')
+
 
 if __name__ == '__main__':
     do_main()

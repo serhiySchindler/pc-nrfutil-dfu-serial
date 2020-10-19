@@ -37,4 +37,4 @@
 
 """ Version definition for nrfutil. """
 
-NRFUTIL_DFU_SERIAL_VERSION = "3.4.0"
+NRFUTIL_DFU_SERIAL_VERSION = "6.1.0"
