@@ -49,10 +49,10 @@ from nordicsemi.dfu.package         import Package
 logger = logging.getLogger(__name__)
 
 
-class Dfu(object):
+class Dfu:
     """ Class to handle upload of a new hex image to the device. """
 
-    def __init__(self, zip_file_path, dfu_transport):
+    def __init__(self, zip_file_path, dfu_transport, connect_delay):
         """
         Initializes the dfu upgrade, unpacks zip and registers callbacks.
 
@@ -60,6 +60,8 @@ class Dfu(object):
         @type zip_file_path: str
         @param dfu_transport: Transport backend to use to upgrade
         @type dfu_transport: nordicsemi.dfu.dfu_transport.DfuTransport
+        @param connect_delay: Delay in seconds before each connection to the DFU target
+        @type connect_delay: int
         @return
         """
         self.temp_dir           = tempfile.mkdtemp(prefix="nrf_dfu_")
@@ -67,6 +69,11 @@ class Dfu(object):
         self.manifest           = Package.unpack_package(zip_file_path, self.unpacked_zip_path)
 
         self.dfu_transport      = dfu_transport
+
+        if connect_delay is not None:
+            self.connect_delay = connect_delay
+        else:
+            self.connect_delay = 3
 
     def __del__(self):
         """
@@ -77,7 +84,7 @@ class Dfu(object):
 
 
     def _dfu_send_image(self, firmware):
-        time.sleep(3)
+        time.sleep(self.connect_delay)
         self.dfu_transport.open()
 
         start_time = time.time()
