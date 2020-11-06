@@ -246,7 +246,7 @@ class DfuTransportSerial(DfuTransport):
                     self.__stream_data(data     = init_packet[response['offset']:],
                                        crc      = expected_crc,
                                        offset   = response['offset'])
-                except ValidationException:
+                except Exception:
                     return False
 
             self.__execute()
@@ -262,7 +262,7 @@ class DfuTransportSerial(DfuTransport):
             self.__create_command(len(init_packet))
             self.__stream_data(data=init_packet)
             self.__execute()
-        except ValidationException:
+        except Exception:
             raise Exception("Failed to send init packet")
 
     def send_firmware(self, firmware):
@@ -290,7 +290,7 @@ class DfuTransportSerial(DfuTransport):
                                                              crc    = response['crc'],
                                                              offset = response['offset'])
                     response['offset'] += len(to_send)
-                except ValidationException:
+                except Exception:
                     # Remove corrupted data.
                     response['offset'] -= remainder
                     response['crc']     = \
@@ -308,7 +308,7 @@ class DfuTransportSerial(DfuTransport):
                 self.__create_data(len(data))
                 response['crc'] = self.__stream_data(data=data, crc=response['crc'], offset=i)
                 self.__execute()
-            except ValidationException:
+            except Exception:
                 raise Exception("Failed to send firmware")
 
             self._send_event(event_type=DfuEvent.PROGRESS_EVENT, progress=len(data))
@@ -461,10 +461,10 @@ class DfuTransportSerial(DfuTransport):
             "len:{0} offset:{1} crc:0x{2:08X}".format(len(data), offset, crc))
         def validate_crc():
             if (crc != response['crc']):
-                raise ValidationException('Failed CRC validation.\n'\
+                raise Exception('Failed CRC validation.\n'\
                                 + 'Expected: {} Received: {}.'.format(crc, response['crc']))
             if (offset != response['offset']):
-                raise ValidationException('Failed offset validation.\n'\
+                raise Exception('Failed offset validation.\n'\
                                 + 'Expected: {} Received: {}.'.format(offset, response['offset']))
 
         current_pnr     = 0

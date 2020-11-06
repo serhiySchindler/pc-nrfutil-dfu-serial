@@ -1,6 +1,5 @@
-#!/usr/bin/env python
 #
-# Copyright (c) 2016 Nordic Semiconductor ASA
+# Copyright (c) 2019 Nordic Semiconductor ASA
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without modification,
@@ -35,64 +34,20 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
-"""
-Setup script for nrfutil.
 
-USAGE:
-    python setup.py install
+def calc_crc16(binary_data: bytes, crc=0xffff):
+    """
+    Calculates CRC16 on binary_data
 
-"""
-from setuptools import setup, find_packages
+    :param int crc: CRC value to start calculation with
+    :param bytearray binary_data: Array with data to run CRC16 calculation on
+    :return int: Calculated CRC value of binary_data
+    """
 
-from nordicsemi import version
-
-description = """A Python package that includes the nrfutil-dfu-serial utility"""
-with open("requirements.txt") as reqs_file:
-    reqs = reqs_file.readlines()
-
-setup(
-    name="nrfutil-dfu-serial",
-    version=version.NRFUTIL_DFU_SERIAL_VERSION,
-    license="Modified BSD License",
-    author = "Nordic Semiconductor ASA / theporttechnology.com",
-    url="https://github.com/serhiySchindler/pc-nrfutil-dfu-serial",
-    description="Nordic Semiconductor / theporttechnology.com nrfutil-dfu-serial utility",
-    long_description=description,
-    packages=find_packages(exclude=["tests.*", "tests"]),
-    package_data = {
-        '': ['../requirements.txt',]
-    },
-    install_requires=reqs,
-    zipfile=None,
-    python_requires='>=3',
-    tests_require=[
-        "pyserial >= 3"
-    ],
-    zip_safe=False,
-    classifiers=[
-        'Development Status :: 4 - Beta',
-
-        'Intended Audience :: Developers',
-
-        'Operating System :: MacOS',
-        'Operating System :: Microsoft :: Windows',
-        'Operating System :: POSIX :: Linux',
-
-        'Topic :: System :: Networking',
-        'Topic :: System :: Hardware :: Hardware Drivers',
-        'Topic :: Software Development :: Embedded Systems',
-
-        'License :: Other/Proprietary License',
-
-        'Programming Language :: Python :: 3',
-    ],
-    keywords = 'nordic nrf52 ble bluetooth dfu nrfutil-dfu-serial',
-    entry_points='''
-      [console_scripts]
-      nrfutil-dfu-serial = nordicsemi.__main__:do_main
-    ''',
-    console=[{
-        "script": "./nordicsemi/__main__.py",
-        "dest_base": "nrfutil-dfu-serial"
-    }],
-)
+    for b in binary_data:
+        crc = (crc >> 8 & 0x00FF) | (crc << 8 & 0xFF00)
+        crc ^= ord(b)
+        crc ^= (crc & 0x00FF) >> 4
+        crc ^= (crc << 8) << 4
+        crc ^= ((crc & 0x00FF) << 4) << 1
+    return crc & 0xFFFF
